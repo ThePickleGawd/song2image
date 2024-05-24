@@ -8,10 +8,21 @@ import argparse
 import os
 
 
-def convert_image_to_audio(image_path: str, metadata_path: str):
+def read_metadata_from_image(image_path: str):
+    image = Image.open(image_path)
+    metadata_str = image.info.get("metadata")
+
+    if metadata_str is None:
+        print("No metadata found.")
+        return None
+
+    metadata = json.loads(metadata_str)
+    return metadata
+
+
+def convert_image_to_audio(image_path: str):
     # Load metadata
-    with open(metadata_path, "r") as f:
-        metadata = json.load(f)
+    metadata = read_metadata_from_image(image_path)
 
     # Load image
     image = Image.open(image_path)
@@ -50,4 +61,4 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     # Convert image back to audio using saved metadata
-    convert_image_to_audio(image_path=args.file, metadata_path="metadata.json")
+    convert_image_to_audio(image_path=args.file)

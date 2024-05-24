@@ -4,6 +4,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from pydub import AudioSegment
 import numpy as np
 from PIL import Image
+from PIL.PngImagePlugin import PngInfo
 import io
 import base64
 import json
@@ -51,10 +52,8 @@ def convert_audio_to_image(file: UploadFile):
     # Save as image
     image = Image.fromarray(image_data, mode="L")
     buffered = io.BytesIO()
-    image.save(buffered, format="PNG")
-    img_str = base64.b64encode(buffered.getvalue()).decode("utf-8")
 
-    # Metadata
+    # Create metadata
     metadata = {
         "sample_rate": sample_rate,
         "channels": channels,
@@ -63,14 +62,22 @@ def convert_audio_to_image(file: UploadFile):
         "max": raw_data.max(),
         "min": raw_data.min(),
     }
+    metadata_str = json.dumps(metadata)
 
-    return img_str, metadata
+    # Embed metadata in the image's info dictionary
+    png_info = PngInfo()
+    png_info.add_text("metadata", metadata_str)
+
+    image.save(buffered, format="PNG", pnginfo=png_info)
+    img_str = base64.b64encode(buffered.getvalue()).decode("utf-8")
+
+    return img_str
 
 
 @app.post("/upload")
 async def upload(file: UploadFile = File(...)):
-    image, metadata = convert_audio_to_image(file)
-    response = {"image": image, "metadata": metadata}
+    image = convert_audio_to_image(file)
+    response = {"image": image}
     return JSONResponse(content=response)
 
 
